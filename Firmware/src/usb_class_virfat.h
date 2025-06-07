@@ -39,8 +39,8 @@ void virfat_file_dummy(uint8_t *buf, uint32_t addr, uint16_t file_idx);
 //#define VIRFAT_DATE_DD_MM_YYYY	23, 5, 2025 //date of create / last access. If not defined - AUTO
 //#define VIRFAT_TIME_HH_MM_SS	0, 0, 0 //time of create / last access. If not defined - AUTO
 //#define VIRFAT_VOLID		0xFC561629 //disk UUID 
-//#define VIRFAT_VOLNAME		"VIRTUAL_FAT" //8.3->11 chars. Disk Label (sometimes ignored by OS)
-#define VIRFAT_VOLNAME		"Test       "
+//#define VIRFAT_VOLNAME	"VIRTUAL_FAT" //8.3->11 chars. Disk Label (sometimes ignored by OS)
+#define VIRFAT_VOLNAME		"MailNot_cfg"
 //optional setings
 #define VIRFAT_JMPBOOT		{0xEB, 0x3C, 0x90} //I dont know why but this data is important...
 #define VIRFAT_OEMNAME		"virfat  " //8 chars. FAT internal name of program created FS
