@@ -89,7 +89,6 @@ char hid_ep0_out(config_pack_t *req, uint16_t offset, uint16_t rx_size){
 volatile uint8_t colortable[8] = {0b000, 0b010, 0b100, 0b001, 0b011, 0b110, 0b101, 0b111};
 volatile uint8_t colorpwm[3] = {100, 100, 100};
 #define RGBTIM_MAX 255
-#warning TODO: add settings into VirFat
 #warning TODO: FLASH
 
 void led_init(){

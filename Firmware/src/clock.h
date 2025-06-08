@@ -3,6 +3,7 @@
 
 #ifndef CH32V203G8
   #error This clock.h specified for ch32v203g8 only
+  //This MCU hasnt quartz
 #endif
 
 #define CLOCK_HSI 0

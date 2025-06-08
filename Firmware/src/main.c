@@ -71,7 +71,7 @@ int main(){
   
   lcd_beep_func = snd_start;
 
-  lcd_puts(__TIME__);
+  lcd_puts("\e[J\e[1;1H"__TIME__);
   
   UART_init(USART, 144000000 / 2 / 115200);
   UART_puts(USART, __TIME__ " " __DATE__ "\r\n");
