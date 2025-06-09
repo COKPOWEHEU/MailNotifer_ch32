@@ -45,7 +45,6 @@ struct{
   uint16_t Ucont;
 }adc_raw[1];
 
-
 void adc_init(){
   ADC_init(ADC_1, ADC_TS_VREF_EN, 8);
   ADC_SAMPLING_TIME( ADC_1, marg5(LCD_CONT_ADC), ADC_SAMPL_TIME_72 );
@@ -79,6 +78,26 @@ void tim_init(){
   timer_enable(LCD_CONT_TIM);
 }
 
+#define BTN_MIN_ticks	(144000000 / 1000)
+#define BTN_LONG_ticks	(144000000)
+//0 - released
+//<0 - pressed <time>
+//>0 - was pressed <time>. Now released
+int32_t btn_pressed_time(uint32_t time){
+  static uint32_t t_press = 0;
+  static uint8_t prev = 0;
+  if(GPI_ON(BTN)){
+    if(prev)return (t_press - time);
+    prev = 1;
+    t_press = time;
+    return -1;
+  }else{
+    if(!prev)return 0;
+    prev = 0;
+    return (time - t_press);
+  }
+}
+
 int main(){
   clock_HS(1); systick_init();
   RCC->APB2PCENR |= RCC_IOPAEN | RCC_IOPBEN | RCC_AFIOEN;
@@ -89,49 +108,77 @@ int main(){
   tim_init();
   adc_init();
   snd_init();
-  
-  eeflash_init();
-  //eeflash_read(&device_settings);
-#warning TODO: button
-#warning TODO: write (eeflash_write(&device_settings);)
-  /*
-Воткнуть при нажатой -> сброс настроек
-Воткнуть при отпущенной -> штатный старт
-штатный режим + кнопка -> режим настройки (+MSD)
-режим настройки + кнопка -> штатный режим (-MSD) без сохранения
-режим настройки + кнопка (долгое) -> штатный режим (-MSD) с сохранением
-  */
-  
   lcd_beep_func = snd_start;
-
-  lcd_puts("\e[J\e[1;1H"__TIME__);
+  //lcd_puts("\e[J\e[1;1H"__TIME__"\e1;1H");
+  lcd_puts("\e[J\e[1;1H_\e1;1H");
   
   UART_init(USART, 144000000 / 2 / 115200);
   UART_puts(USART, __TIME__ " " __DATE__ "\r\n");
   
+  eeflash_init();
+#if 0
+  //on first burning
+  eeflash_erase();
+  eeflash_write(&device_settings);
+#endif
+
+  //if the button is pressed when power on - ask for reset settings to default
+  if(GPI_ON(BTN)){
+    lcd_puts("\e[1JRst? Btn off-Y");
+    lcd_puts("\e[2HDisconnect - N");
+    while(GPI_ON(BTN)){
+      uint32_t time = systick_read32();
+      lcd_update(time, adc_raw[0].Ucont);
+    }
+    delay_ticks(144000000);
+    eeflash_write(&device_settings);
+    
+    lcd_puts("\e[1JSettings restor");
+    lcd_puts("\e[2Hed to default");
+    uint32_t t_av = systick_read32() + 144000000 * 5;
+    uint32_t t;
+    do{
+      t = systick_read32();
+      lcd_update(t, adc_raw[0].Ucont);
+    }while( (int32_t)(t - t_av) < 0 );
+    lcd_puts("\e[J");
+  }
+  
+  eeflash_read(&device_settings);
+  lcd_bl(device_settings.lcd.backlight);
+  
   usb_class_mode = 0;
-  if(GPI_ON(BTN))usb_class_mode = 1;
   
   USB_setup(); //USB_device
-  uint8_t cont = 0;
+
   uint32_t time;
-  
-  
   while(1){
     usb_class_poll();
     time = systick_read32();
     
-    int16_t ch = UART_getc(USART);
-    if(ch > 0)lcd_putc(ch);
-    
     lcd_update(time, adc_raw[0].Ucont);
     snd_poll(time);
     
-#if 0
-    if(reinit_flag){
-      USB_setup();
-      reinit_flag = 0;
+    
+    int32_t btn = btn_pressed_time(time);
+    if( btn > BTN_MIN_ticks ){
+      if(usb_class_mode == 0){
+        usb_class_mode = 1;
+        USB_setup();
+      }else{
+        if( btn < BTN_LONG_ticks ){
+          eeflash_read(&device_settings);
+          lcd_temptext = "undo changes    ";
+          led_init();
+          lcd_bl(device_settings.lcd.backlight);
+        }else{
+          eeflash_write(&device_settings);
+          lcd_temptext = "saved           ";
+        }
+        usb_class_mode = 0;
+        USB_setup();
+      }
     }
-#endif
+    
   }
 }

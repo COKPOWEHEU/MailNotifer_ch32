@@ -165,6 +165,32 @@ void eeflash_write(void *data){
   while((RCC->CFGR0 & RCC_SWS) != resbit){}
 }
 
+void eeflash_erase(){
+  //Change F_CPU to 8MHz - safety speed for writiing flash
+  uint32_t speed_prev = (RCC->CFGR0 & RCC_SW);
+  RCC->CFGR0 = (RCC->CFGR0 &~ RCC_SW) | RCC_SW_HSI;
+  while((RCC->CFGR0 & RCC_SWS) != RCC_SWS_HSI){}
+  
+  flash_unlock();
+  
+  uint32_t addr;
+  for(int i=0; i<NPAGES; i++){
+    addr = EEFLASH_ADDRESS + (i*PAGE_SIZE);
+    flash_erase_4K(addr);
+  }
+  
+  
+  flash_lock();
+  
+  //restore clock
+  uint32_t resbit = 0;
+  if(speed_prev == RCC_SW_HSI)resbit = RCC_SWS_HSI;
+  if(speed_prev == RCC_SW_HSE)resbit = RCC_SWS_HSE;
+  if(speed_prev == RCC_SW_PLL)resbit = RCC_SWS_PLL;
+  RCC->CFGR0 = (RCC->CFGR0 &~ RCC_SW) | speed_prev;
+  while((RCC->CFGR0 & RCC_SWS) != resbit){}
+}
+
 void eeflash_init(){
   eef_data = eef_find_last();
 }

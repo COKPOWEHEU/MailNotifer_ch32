@@ -44,6 +44,7 @@ static char buf_update_flag = 0;
 static char usersym_update = 0;
 static char save_flag = 0;
 void (*lcd_beep_func)(void) = NULL;
+char *lcd_temptext = NULL;
 
 #include "savedata.h"
 #define lcd_cont_val	(device_settings.lcd.contrast)
@@ -106,7 +107,7 @@ void lcd_init(){
   GPIO_config(LCD_RS); GPIO_config(LCD_E);
   timer_chval(LCD_BL_TIM) = 0; timer_chcfg(LCD_BL_TIM); timer_chpol(LCD_BL_TIM, LCD_BL);
   timer_chval(LCD_CONT_TIM) = 0; timer_chcfg(LCD_CONT_TIM); timer_chpol(LCD_CONT_TIM, LCD_CONT);
-  lcd_bl(10);
+  lcd_bl(lcd_bl_val);
   lcd_cont(80);
 // LCD init sequence (some magick inside)
   lcd_delay_us(1000);
@@ -159,6 +160,7 @@ void lcd_init(){
 }
 
 void lcd_bl(uint8_t val){
+  lcd_bl_val = val;
   timer_chval(LCD_BL_TIM) = ((uint32_t)val * marg4(LCD_BL_TIM) + 50) / 100;
 }
 
@@ -339,6 +341,17 @@ void lcd_update(uint32_t time, uint32_t cur_adc){
       if(tim > 0)tim--;
     }
     timer_chval(LCD_CONT_TIM) = tim;
+  }
+  
+  if(lcd_temptext != NULL){
+    if((buf_pos != BP_WAIT) || (buf_step != BPS_READY))return;
+    lcd_cmd(0x80 | LCD_STR_1);
+    for(int i=0; lcd_temptext[i]!=0; i++){
+      if(lcd_temptext[i] == '\n'){lcd_cmd(0x80 | LCD_STR_2); continue;}
+      lcd_data(lcd_temptext[i]);
+    }
+    lcd_temptext = NULL;
+    force_time = -50;
   }
   
   if(usersym_update){
@@ -750,7 +763,7 @@ void vf_lcdcfg_read(uint8_t *buf, uint32_t addr, uint16_t file_idx){
   memcpy(buf, (char*)cfg_template, sizeof(cfg_template));
   memset(buf + sizeof(cfg_template), ' ', 512-sizeof(cfg_template));
   
-  int32_t val = timer_chval(LCD_BL_TIM) * 100 / marg4(LCD_BL_TIM);
+  int32_t val = lcd_bl_val; //timer_chval(LCD_BL_TIM) * 100 / marg4(LCD_BL_TIM);
   fpi32tos_inplace((char*)(buf+sizeof(LCDCFG_STR_BR)-1), val, 0, 3);
   
   val = 100 - 100 * lcd_cont_val / 4096;

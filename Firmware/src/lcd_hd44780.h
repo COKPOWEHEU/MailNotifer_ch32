@@ -29,6 +29,7 @@ typedef enum{
 }newline_mode_t;
 
 extern void (*lcd_beep_func)(void);
+extern char *lcd_temptext;
 
 void lcd_init();
 void lcd_bl(uint8_t val);
