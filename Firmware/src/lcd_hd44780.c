@@ -4,8 +4,8 @@
 #include "timer.h"
 #include "clock.h"
 #include "strlib.h"
-#define UART_DECLARATIONS 2
-#include "uart.h"
+//#define UART_DECLARATIONS 2
+//#include "uart.h"
 
 #if !defined(LCD_D4) || !defined(LCD_D5) || !defined(LCD_D6) || !defined(LCD_D7) || !defined(LCD_RS) || !defined(LCD_E)
   #error define LCD_D4, LCD_D5, LCD_D6, LCD_D7, LCD_RS, LCD_E
@@ -45,6 +45,14 @@ static char usersym_update = 0;
 static char save_flag = 0;
 void (*lcd_beep_func)(void) = NULL;
 
+#include "savedata.h"
+#define lcd_cont_val	(device_settings.lcd.contrast)
+#define lcd_bl_val		(device_settings.lcd.backlight)
+#define lcd_cur			(device_settings.lcd.cursor)
+#define recode_dynamic	(device_settings.lcd.recode_table)
+#define newline_mode	(device_settings.lcd.newline_mode)
+#define usersym			(device_settings.lcd.usersym)
+/*
 #warning TODO: FLASH
 static uint32_t lcd_cont_val = 0; //TODO: FLASH
 static uint8_t lcd_bl_val = 10; //TODO: FLASH
@@ -60,20 +68,8 @@ usersym_t usersym[8] = { //TODO: FLASH
   {U'�', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
   {U'�', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
   {U'�', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  //*/
-  //{U'൦', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  //{U'𒀀', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  /*
-  {U'a', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  {U'b', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  {U'c', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  {U'd', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  {U'e', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  {U'f', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  {U'g', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  {U'h', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}},
-  //*/
 };
+*/
 //| ### |
 //|## ##|
 //|# # #|
@@ -156,6 +152,10 @@ void lcd_init(){
   recode_dynamic[5].sym = L'൦';
   recode_dynamic[7].sym = L'𒀀';
   //*/
+  const usersym_t usym = {U'�', {0x0E, 0x1B, 0x15, 0x1D, 0x1B, 0x1F, 0x1B, 0x0E}};
+  for(int i=0; i<8; i++){
+    memcpy((void*)&usersym[i], (void*)&usym, sizeof(usym));
+  }
 }
 
 void lcd_bl(uint8_t val){
@@ -762,6 +762,7 @@ void vf_lcdcfg_read(uint8_t *buf, uint32_t addr, uint16_t file_idx){
 
 void vf_lcdcfg_write(uint8_t *buf, uint32_t addr, uint16_t file_idx){
   uint32_t val = 0;
+  buf[511] = 0;
   char *en = (char*)buf + 512;
   
   char *ch = strstr((char*)buf, "Brightness (0 - 100):");
@@ -907,6 +908,7 @@ void vf_usersym_read(uint8_t *buf, uint32_t addr, uint16_t file_idx){
 
 void vf_usersym_write(uint8_t *buf, uint32_t addr, uint16_t file_idx){
   usersym_t *us = &(usersym[ (uint32_t)(virfat_rootdir[file_idx].userdata) ]);
+  buf[511] = 0;
   uint8_t data[8] = {0,0,0,0,0,0,0,0};
   uint32_t sym = 0;
   

@@ -13,10 +13,31 @@
 #include "strlib.h"
 #include "lcd_hd44780.h"
 #include "beep.h"
+#define EEFLASH_SIZE		(2*4096)
+#define EEFLASH_DATASIZE 	sizeof(device_settings_t)
+#define EEFLASH_ADDRESS		0x08036000 //non-zero-wait area (244k) - (2*4k, eeflash_size) - (2*4k, just in case)
+#define EEFLASH_IMPLEMENTATION
+#include "eeflash.h"
+#include "savedata.h"
 
 //while true ; do echo -e "\e[1;1H" > /dev/tty_MAIL_LCD_0 ; date "+%H:%M:%S           " > /dev/tty_MAIL_LCD_0 ; date "+%d.%m.%Y" | tr -d '\n' > /dev/tty_MAIL_LCD_0 ; sleep 1 ; done
 
 //while true ; do date "+_%H:%M:%S_%d.%m.%Y" | tr -d '\n' | sed 's/_/\n/g' > /dev/tty_MAIL_LCD_0 ; sleep 1 ; done
+
+//default values
+device_settings_t device_settings = {
+  .lcd = {
+    .contrast = 0,
+    .backlight = 10,
+    .cursor = CUR_NONE,
+    .newline_mode = NL_NEWLINE,
+  },
+  .rgb = {
+    .colortable = {0b000, 0b010, 0b100, 0b001, 0b011, 0b110, 0b101, 0b111},
+    .colorpwm = {100, 100, 100},
+  },
+  .snd = {.freq_Hz = 500, .dur_ms = 1000, .vol = 10,}
+};
 
 void SystemInit(void){}
 
@@ -68,6 +89,18 @@ int main(){
   tim_init();
   adc_init();
   snd_init();
+  
+  eeflash_init();
+  //eeflash_read(&device_settings);
+#warning TODO: button
+#warning TODO: write (eeflash_write(&device_settings);)
+  /*
+Воткнуть при нажатой -> сброс настроек
+Воткнуть при отпущенной -> штатный старт
+штатный режим + кнопка -> режим настройки (+MSD)
+режим настройки + кнопка -> штатный режим (-MSD) без сохранения
+режим настройки + кнопка (долгое) -> штатный режим (-MSD) с сохранением
+  */
   
   lcd_beep_func = snd_start;
 

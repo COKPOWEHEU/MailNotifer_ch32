@@ -28,9 +28,6 @@ typedef enum{
   NL_IGNORE = 2,	// /r, /n = do nothing
 }newline_mode_t;
 
-extern lcd_cur_t lcd_cur;
-extern char lcd_buffer[LCD_W * LCD_H];
-extern recode_t recode_dynamic[];
 extern void (*lcd_beep_func)(void);
 
 void lcd_init();

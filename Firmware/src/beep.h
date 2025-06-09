@@ -5,9 +5,15 @@
 //#define SND		A,9,1,GPIO_APP50
 //#define TSND	1,2,TIMO_PWM_NINV | TIMO_POS
 
+/*
 static uint32_t snd_freq_Hz = 500; //TODO: FLASH
 static uint32_t snd_dur_ms = 1000; //TODO: FLASH
 static uint32_t snd_vol = 10; // 0 - 100 //TODO: FLASH
+*/
+#include "savedata.h"
+#define snd_freq_Hz (device_settings.snd.freq_Hz)
+#define snd_dur_ms	(device_settings.snd.dur_ms)
+#define snd_vol		(device_settings.snd.vol)
 static uint32_t snd_t_off = 0;
 static uint8_t snd_en = 0;
 
@@ -84,6 +90,7 @@ void vf_snd_read(uint8_t *buf, uint32_t addr, uint16_t file_idx){
 void vf_snd_write(uint8_t *buf, uint32_t addr, uint16_t file_idx){
   char *ch;
   char *en = (char*)buf + 512;
+  buf[511] = 0;
   
   ch = strstr((char*)buf, "Frequency");
   while(ch != NULL){

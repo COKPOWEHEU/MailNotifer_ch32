@@ -85,11 +85,14 @@ char hid_ep0_out(config_pack_t *req, uint16_t offset, uint16_t rx_size){
 }
 
 //b2-R, b1-G, b0-B
-//                                  -       R     G        B     GB    RG     R B    RGB
-volatile uint8_t colortable[8] = {0b000, 0b010, 0b100, 0b001, 0b011, 0b110, 0b101, 0b111};
-volatile uint8_t colorpwm[3] = {100, 100, 100};
+//                                    -       R     G        B     GB    RG     R B    RGB
+//volatile uint8_t colortable[8] = {0b000, 0b010, 0b100, 0b001, 0b011, 0b110, 0b101, 0b111};
+//volatile uint8_t colorpwm[3] = {100, 100, 100};
+#include "savedata.h"
+#define colortable	(device_settings.rgb.colortable)
+#define colorpwm	(device_settings.rgb.colorpwm)
+
 #define RGBTIM_MAX 255
-#warning TODO: FLASH
 
 void led_init(){
   GPIO_config(RLED); GPIO_config(GLED); GPIO_config(BLED);
@@ -171,6 +174,7 @@ void vf_rgb_write(uint8_t *buf, uint32_t addr, uint16_t file_idx){
   char *ch;
   char *en = (char*)buf + 512;
   uint32_t r=0, g=0, b=0;
+  buf[511] = 0;
   
   ch = strstr((char*)buf, "R (0 - 100):");
   if(ch == NULL)return;

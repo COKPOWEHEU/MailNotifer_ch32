@@ -28,7 +28,7 @@
 #define SND		A,9,1,GPIO_APP50
 #define TSND	1,2,TIMO_PWM_NINV | TIMO_POS
 
-#define TSND2	3,1
+#define TSND2	4,2
 
 
 #include "pinmacro.h"
