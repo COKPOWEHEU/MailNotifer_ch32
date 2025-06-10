@@ -34,6 +34,7 @@ extern char *lcd_temptext;
 void lcd_init();
 void lcd_bl(uint8_t val);
 void lcd_cont(uint32_t cont);
+void lcd_reload();
 void lcd_update(uint32_t time, uint32_t cur_adc);
 void lcd_putc(char ch);
 void lcd_puts(char *str);

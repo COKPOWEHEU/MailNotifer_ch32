@@ -145,7 +145,7 @@ int main(){
   }
   
   eeflash_read(&device_settings);
-  lcd_bl(device_settings.lcd.backlight);
+  lcd_reload();
   
   usb_class_mode = 0;
   
@@ -170,7 +170,7 @@ int main(){
           eeflash_read(&device_settings);
           lcd_temptext = "undo changes    ";
           led_init();
-          lcd_bl(device_settings.lcd.backlight);
+          lcd_reload();
         }else{
           eeflash_write(&device_settings);
           lcd_temptext = "saved           ";

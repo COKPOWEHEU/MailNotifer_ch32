@@ -159,6 +159,11 @@ void lcd_init(){
   }
 }
 
+void lcd_reload(){
+  lcd_bl(lcd_bl_val);
+  usersym_update = 1;
+}
+
 void lcd_bl(uint8_t val){
   lcd_bl_val = val;
   timer_chval(LCD_BL_TIM) = ((uint32_t)val * marg4(LCD_BL_TIM) + 50) / 100;
