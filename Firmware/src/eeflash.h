@@ -114,6 +114,20 @@ void eeflash_read(void *data){
 }
 
 void eeflash_write(void *data){
+  //Check if data is equal with previous
+  char eq_flag = 1;
+  for(int i=0; i<sizeof(eef_data->data)/sizeof(uint16_t); i++){
+    union{
+      uint16_t v16;
+      uint8_t v8[2];
+    }temp;
+    temp.v8[0] = ((uint8_t*)data)[i*2 + 0];
+    temp.v8[1] = ((uint8_t*)data)[i*2 + 1];
+    temp.v16 ^= MEM_XOR;
+    if(eef_data->data[i] != temp.v16){eq_flag = 0; break;}
+  }
+  if(eq_flag)return;
+  
   //Change F_CPU to 8MHz - safety speed for writiing flash
   uint32_t speed_prev = (RCC->CFGR0 & RCC_SW);
   RCC->CFGR0 = (RCC->CFGR0 &~ RCC_SW) | RCC_SW_HSI;
