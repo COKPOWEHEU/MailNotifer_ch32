@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include "hardware.h"
 
+#define LCD_REINIT_ms	60000
+#define LCD_UPD_SYMS_ms	10000
+
 typedef enum{
   CUR_NONE = 0,
   CUR_LARGE = 1,

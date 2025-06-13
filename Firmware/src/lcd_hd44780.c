@@ -99,7 +99,7 @@ static void lcd_send(unsigned char data){
 static void lcd_cmd(char cmd){GPO_OFF(LCD_RS); lcd_send(cmd);}
 static void lcd_data(char data){GPO_ON(LCD_RS); lcd_send(data);}
 
-void lcd_init(){
+void lcd_reinit(){
   TIMER_CLOCK(marg1(LCD_BL_TIM), 1);
   
   GPIO_config(LCD_BL); GPIO_config(LCD_CONT);
@@ -135,8 +135,15 @@ void lcd_init(){
   lcd_send(0b00101000); // bus config: 4-bit, 2-lines, 5x8
   lcd_send(0b00000110); // cursor increment: pos++, no screen shift
 
+  //lcd_send(0b00001100); // display mode: display ON, cursor OFF
+  lcd_send(0b00001100 | lcd_cur); // display mode: display ON, cursor ?
+} 
+ 
+void lcd_init(){
+  lcd_reinit();
   lcd_send(0b00001100); // display mode: display ON, cursor OFF
   lcd_send(0b00000010); // reset cursor position
+  lcd_delay_us(10000);
   lcd_send(0b00000001); // display clear
   lcd_delay_us(10000);
   
@@ -161,7 +168,7 @@ void lcd_init(){
 
 void lcd_reload(){
   lcd_bl(lcd_bl_val);
-  usersym_update = 1;
+  //usersym_update = 1;
 }
 
 void lcd_bl(uint8_t val){
@@ -337,8 +344,12 @@ void bps_update(uint32_t time){
 void lcd_update(uint32_t time, uint32_t cur_adc){
   static int16_t force_time = 0;
   bps_update(time);
-
-  PERIOD_BLOCK(time, LCD_F_CPU / 1000){
+  
+  static uint32_t t_ms = 0;
+  PERIOD_BLOCK(time, 144000000 / 1000){
+    t_ms++;
+    
+    //Update contrast
     uint16_t tim = timer_chval(LCD_CONT_TIM);
     if(cur_adc > lcd_cont_val){
       if(tim < 255)tim++;
@@ -346,7 +357,34 @@ void lcd_update(uint32_t time, uint32_t cur_adc){
       if(tim > 0)tim--;
     }
     timer_chval(LCD_CONT_TIM) = tim;
-  }
+    
+    
+    // Full reinit (if display was disconnected)
+    static uint32_t disp_reinit_time = 0;
+    if( (int32_t)(t_ms - disp_reinit_time) > 0){
+      if((buf_pos != BP_WAIT) || (buf_step != BPS_READY)){
+        disp_reinit_time = t_ms + 1;
+      }else{
+        lcd_reinit();
+        buf_update_flag = 1;
+        disp_reinit_time = t_ms + LCD_REINIT_ms;
+      }
+    }
+    
+    // Redraw all symbols
+    PERIOD_BLOCK(t_ms, 100){
+      force_time++;
+      if(force_time > 30){buf_update_flag = 1; force_time = 0;}
+      
+      if(buf_update_flag && (buf_pos == BP_WAIT) && (buf_step == BPS_READY)){
+        buf_pos = BP_START;
+        buf_step = BPS_DONE;
+        buf_update_flag = 0;
+        force_time = 0;
+      }
+    }
+    
+  }//t_ms
   
   if(lcd_temptext != NULL){
     if((buf_pos != BP_WAIT) || (buf_step != BPS_READY))return;
@@ -398,19 +436,7 @@ void lcd_update(uint32_t time, uint32_t cur_adc){
         break;
     }
   }
-  
-  PERIOD_BLOCK(time, LCD_F_CPU/10){
-    force_time++;
-    if(force_time > 30){buf_update_flag = 1; force_time = 0;}
-    
-    if(buf_update_flag && (buf_pos == BP_WAIT) && (buf_step == BPS_READY)){
-      buf_pos = BP_START;
-      buf_step = BPS_DONE;
-      buf_update_flag = 0;
-      force_time = 0;
-    }
-  }
-  
+ 
 }
 
 void lcd_puts(char *str){
