@@ -100,15 +100,6 @@ static void lcd_cmd(char cmd){GPO_OFF(LCD_RS); lcd_send(cmd);}
 static void lcd_data(char data){GPO_ON(LCD_RS); lcd_send(data);}
 
 void lcd_reinit(){
-  TIMER_CLOCK(marg1(LCD_BL_TIM), 1);
-  
-  GPIO_config(LCD_BL); GPIO_config(LCD_CONT);
-  GPIO_config(LCD_D4); GPIO_config(LCD_D5); GPIO_config(LCD_D6); GPIO_config(LCD_D7);
-  GPIO_config(LCD_RS); GPIO_config(LCD_E);
-  timer_chval(LCD_BL_TIM) = 0; timer_chcfg(LCD_BL_TIM); timer_chpol(LCD_BL_TIM, LCD_BL);
-  timer_chval(LCD_CONT_TIM) = 0; timer_chcfg(LCD_CONT_TIM); timer_chpol(LCD_CONT_TIM, LCD_CONT);
-  lcd_bl(lcd_bl_val);
-  lcd_cont(80);
 // LCD init sequence (some magick inside)
   lcd_delay_us(1000);
   GPO_OFF(LCD_RS);
@@ -140,6 +131,15 @@ void lcd_reinit(){
 } 
  
 void lcd_init(){
+  TIMER_CLOCK(marg1(LCD_BL_TIM), 1);
+  
+  GPIO_config(LCD_BL); GPIO_config(LCD_CONT);
+  GPIO_config(LCD_D4); GPIO_config(LCD_D5); GPIO_config(LCD_D6); GPIO_config(LCD_D7);
+  GPIO_config(LCD_RS); GPIO_config(LCD_E);
+  timer_chval(LCD_BL_TIM) = 0; timer_chcfg(LCD_BL_TIM); timer_chpol(LCD_BL_TIM, LCD_BL);
+  timer_chval(LCD_CONT_TIM) = 0; timer_chcfg(LCD_CONT_TIM); timer_chpol(LCD_CONT_TIM, LCD_CONT);
+  lcd_bl(lcd_bl_val);
+  lcd_cont(80);
   lcd_reinit();
   lcd_send(0b00001100); // display mode: display ON, cursor OFF
   lcd_send(0b00000010); // reset cursor position
@@ -349,6 +349,8 @@ void lcd_update(uint32_t time, uint32_t cur_adc){
   PERIOD_BLOCK(time, 144000000 / 1000){
     t_ms++;
     
+    //lcd_cont((t_ms / 10000)%100);
+    
     //Update contrast
     uint16_t tim = timer_chval(LCD_CONT_TIM);
     if(cur_adc > lcd_cont_val){
@@ -358,6 +360,12 @@ void lcd_update(uint32_t time, uint32_t cur_adc){
     }
     timer_chval(LCD_CONT_TIM) = tim;
     
+    /*
+    UART_puts(UART_DECLARATIONS, fpi32tos(NULL, cur_adc, 0, 0));
+    UART_puts(UART_DECLARATIONS, "\t");
+    UART_puts(UART_DECLARATIONS, fpi32tos(NULL, tim, 0, 0));
+    UART_puts(UART_DECLARATIONS, "\r\n");
+    */
     
     // Full reinit (if display was disconnected)
     static uint32_t disp_reinit_time = 0;
@@ -681,11 +689,12 @@ static void decode_cur_type(char *str){
 }
 
 static void decode_special(char *str){
-  switch(str[2]){
-    case '0': newline_mode = NL_NORMAL; break;
-    case '1': newline_mode = NL_NEWLINE; break;
-    case '2': newline_mode = NL_IGNORE; break;
-  }
+  uint32_t val = 0;
+  for(str+=2; (str[0]>='0')&&(str[0]<='9'); str++)val = val*10 + str[0]-'0';
+  if(val <= 100){lcd_bl(val); return;}
+  if(val == 101)newline_mode = NL_NORMAL;
+    else if(val == 102)newline_mode = NL_NEWLINE;
+    else if(val == 103)newline_mode = NL_IGNORE;
 }
 
 
@@ -730,9 +739,13 @@ void lcd_putc(char ch){
         if(ch == 'H'){
           decode_esc_H(esc);
         }else if(ch == 'J'){
-          memset(lcd_buffer, ' ', sizeof(lcd_buffer));
+          uint32_t pos = lcd_cur_x + lcd_cur_y*LCD_W;
+          switch(esc[2]){
+            case '0': case 'J': memset(lcd_buffer, ' ', pos); break; 
+            case '1': memset(lcd_buffer+pos, ' ', sizeof(lcd_buffer)-pos); break;
+            case '2': memset(lcd_buffer, ' ', sizeof(lcd_buffer)); lcd_cur_x = lcd_cur_y = 0; break;
+          }
           buf_update_flag = 1;
-          lcd_cur_x = lcd_cur_y = 0;
         }else if( (ch == 'q')||(ch == 'l')){
           decode_cur_type(esc);
         }else if(ch == '.'){

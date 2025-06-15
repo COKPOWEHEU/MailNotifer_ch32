@@ -110,7 +110,7 @@ int main(){
   snd_init();
   lcd_beep_func = snd_start;
   //lcd_puts("\e[J\e[1;1H"__TIME__"\e1;1H");
-  lcd_puts("\e[J\e[1;1H_\e1;1H");
+  lcd_puts("\e[J\e[1;1H_\e[1;1H");
   
   UART_init(USART, 144000000 / 2 / 115200);
   UART_puts(USART, __TIME__ " " __DATE__ "\r\n");
@@ -156,6 +156,7 @@ int main(){
     usb_class_poll();
     time = systick_read32();
     
+    //while(UART_avaible(USART)<200){}
     lcd_update(time, adc_raw[0].Ucont);
     snd_poll(time);
     
