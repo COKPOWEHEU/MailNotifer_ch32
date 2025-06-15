@@ -681,11 +681,12 @@ static void decode_cur_type(char *str){
 }
 
 static void decode_special(char *str){
-  switch(str[2]){
-    case '0': newline_mode = NL_NORMAL; break;
-    case '1': newline_mode = NL_NEWLINE; break;
-    case '2': newline_mode = NL_IGNORE; break;
-  }
+  uint32_t val = 0;
+  for(str+=2; (str[0]>='0')&&(str[0]<='9'); str++)val = val*10 + str[0]-'0';
+  if(val <= 100){lcd_bl(val); return;}
+  if(val == 101)newline_mode = NL_NORMAL;
+    else if(val == 102)newline_mode = NL_NEWLINE;
+    else if(val == 103)newline_mode = NL_IGNORE;
 }
 
 
@@ -730,9 +731,13 @@ void lcd_putc(char ch){
         if(ch == 'H'){
           decode_esc_H(esc);
         }else if(ch == 'J'){
-          memset(lcd_buffer, ' ', sizeof(lcd_buffer));
+          uint32_t pos = lcd_cur_x + lcd_cur_y*LCD_W;
+          switch(esc[2]){
+            case '0': case 'J': memset(lcd_buffer, ' ', pos); break; 
+            case '1': memset(lcd_buffer+pos, ' ', sizeof(lcd_buffer)-pos); break;
+            case '2': memset(lcd_buffer, ' ', sizeof(lcd_buffer)); lcd_cur_x = lcd_cur_y = 0; break;
+          }
           buf_update_flag = 1;
-          lcd_cur_x = lcd_cur_y = 0;
         }else if( (ch == 'q')||(ch == 'l')){
           decode_cur_type(esc);
         }else if(ch == '.'){
